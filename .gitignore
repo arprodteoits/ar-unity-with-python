@@ -1,0 +1,83 @@
+# =============== #
+# Unity Generated #
+# =============== #
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+[Mm]emoryCaptures/
+UserSettings/
+
+# Visual Studio cache
+.vs/
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.pdb
+*.mdb
+*.opendb
+*.VC.db
+
+# =============== #
+# OS Files        #
+# =============== #
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# =============== #
+# Android/Gradle  #
+# =============== #
+.gradle/
+.gradle-cache/
+*.apk
+*.aab
+*.obb
+*.log
+*.lock
+.gradle/
+captures/
+.gradle/
+local.properties
+*.keystore
+*.jks
+*.apks
+*.dex
+*.class
+*.apk.idsig
+
+# =============== #
+# Unity Build Artifacts
+# =============== #
+/[Oo]bj/
+/[Bb]uilds/
+/[Bb]in/
+/ExportedObj/
+/Packages/com.unity.collab-proxy/
+
+# =============== #
+# Other Tools     #
+# =============== #
+.idea/
+.vscode/
+*.swp
+*.tmp
+*.orig
+*.bak
+
+# Large model files
+*.fbx
+*.tgz
