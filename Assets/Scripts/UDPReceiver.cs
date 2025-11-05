@@ -7,10 +7,12 @@ using UnityEngine.UI;
 
 public class UDPReceiver : MonoBehaviour
 {
-    public RawImage display;       // drag UI RawImage ke sini
-    public int port = 5052;        // harus sama dengan sender.py
+    public RawImage display;       // Drag RawImage dari Inspector
+    public int port = 5052;
+
     private Thread receiveThread;
     private UdpClient client;
+    private byte[] latestData = null;
     private Texture2D texture;
 
     void Start()
@@ -35,8 +37,7 @@ public class UDPReceiver : MonoBehaviour
                 byte[] data = client.Receive(ref remoteEndPoint);
                 if (data != null && data.Length > 0)
                 {
-                    // update texture di main thread
-                    UpdateTexture(data);
+                    latestData = data; // simpan sementara, tidak langsung update UI
                 }
             }
             catch (Exception e)
@@ -46,14 +47,15 @@ public class UDPReceiver : MonoBehaviour
         }
     }
 
-    void UpdateTexture(byte[] data)
+    void Update()
     {
-        // karena thread beda, gunakan Unity main thread
-        UnityMainThreadDispatcher.Instance().Enqueue(() =>
+        // Update texture di main thread (aman)
+        if (latestData != null)
         {
-            texture.LoadImage(data);
+            texture.LoadImage(latestData);
             display.texture = texture;
-        });
+            latestData = null;
+        }
     }
 
     void OnApplicationQuit()
