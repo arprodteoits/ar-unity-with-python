@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 421239950}
   - component: {fileID: 421239952}
   - component: {fileID: 421239953}
+  - component: {fileID: 421239954}
   m_Layer: 0
   m_Name: PythonReceiver
   m_TagString: Untagged
@@ -190,12 +191,27 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 421239949}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 54aa8b2d0cde41441b913699c3b03b44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   display: {fileID: 464799350}
+  port: 5052
+--- !u!114 &421239954
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 421239949}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 899ab948251e62c40b5b5bbbb080cec2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  display: {fileID: 464799350}
+  cube: {fileID: 993229175}
   port: 5052
 --- !u!1 &464799348
 GameObject:
@@ -441,7 +457,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: -0.31, y: 0, z: 1.47}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
