@@ -90,6 +90,8 @@ public class PythonUDPReceiver : MonoBehaviour
             cube.transform.position = new Vector3(latestPos.x / 100f, latestPos.y / 100f, 0);
             latestPos = null;
         }
+
+        
     }
 
     void OnApplicationQuit()

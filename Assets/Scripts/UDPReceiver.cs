@@ -50,12 +50,28 @@ public class UDPReceiver : MonoBehaviour
     void Update()
     {
         // Update texture di main thread (aman)
+        // if (latestData != null)
+        // {
+        //     texture.LoadImage(latestData);
+        //     display.texture = texture;
+        //     latestData = null;
+        // }
+
         if (latestData != null)
-        {
-            texture.LoadImage(latestData);
-            display.texture = texture;
-            latestData = null;
-        }
+                {
+                    Debug.Log($"📩 Menerima data ukuran: {latestData.Length} bytes");
+                    bool success = texture.LoadImage(latestData);
+
+                    if (!success)
+                        Debug.LogWarning("⚠️ Gagal decode image data!");
+                    else
+                    {
+                        display.texture = texture;
+                        display.SetNativeSize();
+                    }
+
+                    latestData = null;
+                }
     }
 
     void OnApplicationQuit()

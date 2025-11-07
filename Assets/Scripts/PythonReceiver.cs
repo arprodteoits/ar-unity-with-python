@@ -10,7 +10,7 @@ public class PythonReceiver : MonoBehaviour
 
     void Start()
     {
-        client = new UdpClient(5052);
+        client = new UdpClient(5053);
     }
 
     void Update()
