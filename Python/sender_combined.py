@@ -18,7 +18,7 @@ while True:
     if not ret:
         break
 
-    frame = cv2.resize(frame, (320, 240))
+    frame = cv2.resize(frame, (1280, 720))
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
     # --- deteksi warna merah ---
