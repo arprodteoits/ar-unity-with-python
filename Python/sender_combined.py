@@ -62,6 +62,11 @@ while True:
 
         sock_pos.sendto(data, addr_pos)
 
+    else:
+            # --- TIDAK ADA tangan ---
+        data = json.dumps({"x": -1, "y": -1, "w": 0, "h": 0}).encode("utf-8")
+        sock_pos.sendto(data, addr_pos)
+
         # (opsional) gambar skeleton
         mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
