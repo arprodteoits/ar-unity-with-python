@@ -2,6 +2,7 @@ import cv2
 import socket
 import json
 import numpy as np
+import mediapipe as mp
 
 # --- Socket untuk gambar (ke UDPReceiver Unity) ---
 sock_img = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -11,6 +12,11 @@ addr_img = ('127.0.0.1', 5052)
 sock_pos = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 addr_pos = ('127.0.0.1', 5053)
 
+# MediaPipe hands
+mp_hands = mp.solutions.hands
+mp_draw = mp.solutions.drawing_utils
+hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.6)
+
 cap = cv2.VideoCapture(0)
 
 while True:
@@ -19,36 +25,55 @@ while True:
         break
 
     frame = cv2.resize(frame, (1280, 720))
-    hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # --- deteksi warna merah ---
-    lower_red1 = np.array([0, 120, 70])
-    upper_red1 = np.array([10, 255, 255])
-    lower_red2 = np.array([170, 120, 70])
-    upper_red2 = np.array([180, 255, 255])
-    mask1 = cv2.inRange(hsv, lower_red1, upper_red1)
-    mask2 = cv2.inRange(hsv, lower_red2, upper_red2)
-    mask = mask1 + mask2
+    results = hands.process(rgb)
 
-    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if results.multi_hand_landmarks:
+        hand_landmarks = results.multi_hand_landmarks[0]
 
-    if contours:
-        c = max(contours, key=cv2.contourArea)
-        x, y, w, h = cv2.boundingRect(c)
-        cv2.rectangle(frame, (x, y), (x+w, y+h), (0,255,0), 2)
+        # Ambil bounding box dari semua titik tangan
+        h, w, c = frame.shape
+        xs = []
+        ys = []
 
-        # --- kirim posisi ke Unity (port 5053) ---
-        data = json.dumps({"x": x + w/2, "y": y + h/2, "w": w, "h": h}).encode('utf-8')
+        for lm in hand_landmarks.landmark:
+            xs.append(int(lm.x * w))
+            ys.append(int(lm.y * h))
+
+        x_min, x_max = min(xs), max(xs)
+        y_min, y_max = min(ys), max(ys)
+        w_box = x_max - x_min
+        h_box = y_max - y_min
+
+        cx = x_min + w_box / 2
+        cy = y_min + h_box / 2
+
+        # Draw bounding box di preview
+        cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0,255,0), 2)
+
+        # Kirim posisi ke Unity
+        data = json.dumps({
+            "x": cx,
+            "y": cy,
+            "w": w_box,
+            "h": h_box
+        }).encode('utf-8')
+
         sock_pos.sendto(data, addr_pos)
 
-    # --- kirim gambar ke Unity (port 5052) ---
+        # (opsional) gambar skeleton
+        mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
+
+    # --- kirim gambar ke Unity ---
     _, img_encoded = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
     data = img_encoded.tobytes()
+    
     if len(data) < 60000:
         sock_img.sendto(data, addr_img)
 
-    # --- tampilkan preview ---
-    cv2.imshow("Camera", frame)
+    # Preview
+    cv2.imshow("Hand Tracker", frame)
     if cv2.waitKey(1) == 27:
         break
 
