@@ -24,15 +24,18 @@ while True:
     if not ret:
         break
 
+    # Resize supaya konsisten dengan Unity
     frame = cv2.resize(frame, (1280, 720))
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     results = hands.process(rgb)
 
+    # ======================================================
+    #  HAND DETECTION
+    # ======================================================
     if results.multi_hand_landmarks:
         hand_landmarks = results.multi_hand_landmarks[0]
 
-        # Ambil bounding box dari semua titik tangan
         h, w, c = frame.shape
         xs = []
         ys = []
@@ -49,8 +52,11 @@ while True:
         cx = x_min + w_box / 2
         cy = y_min + h_box / 2
 
-        # Draw bounding box di preview
-        cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0,255,0), 2)
+        # Draw bounding box
+        cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+
+        # Draw skeleton
+        mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
 
         # Kirim posisi ke Unity
         data = json.dumps({
@@ -58,28 +64,36 @@ while True:
             "y": cy,
             "w": w_box,
             "h": h_box
-        }).encode('utf-8')
+        }).encode("utf-8")
 
         sock_pos.sendto(data, addr_pos)
 
     else:
-            # --- TIDAK ADA tangan ---
-        data = json.dumps({"x": -1, "y": -1, "w": 0, "h": 0}).encode("utf-8")
+        # Tidak ada tangan → kirim flag
+        data = json.dumps({
+            "x": -1,
+            "y": -1,
+            "w": 0,
+            "h": 0
+        }).encode("utf-8")
+
         sock_pos.sendto(data, addr_pos)
 
-        # (opsional) gambar skeleton
-        mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-    # --- kirim gambar ke Unity ---
+    # ======================================================
+    #  SEND IMAGE TO UNITY
+    # ======================================================
     _, img_encoded = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
-    data = img_encoded.tobytes()
-    
-    if len(data) < 60000:
-        sock_img.sendto(data, addr_img)
+    data_img = img_encoded.tobytes()
 
-    # Preview
+    # UDP max safe packet < 65KB
+    if len(data_img) < 60000:
+        sock_img.sendto(data_img, addr_img)
+
+    # ======================================================
+    #  PREVIEW
+    # ======================================================
     cv2.imshow("Hand Tracker", frame)
-    if cv2.waitKey(1) == 27:
+    if cv2.waitKey(1) & 0xFF == 27:  # ESC
         break
 
 cap.release()

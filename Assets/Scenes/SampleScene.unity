@@ -156,7 +156,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cube: {fileID: 993229175}
   port: 5053
-  scale: 0.01
 --- !u!4 &421239951
 Transform:
   m_ObjectHideFlags: 0
@@ -556,7 +555,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 993229175}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -3.71, y: 0, z: 0}
+  m_LocalPosition: {x: -3.71, y: 0, z: -0.43}
   m_LocalScale: {x: 2.0341, y: 2.0341, z: 2.0341}
   m_ConstrainProportionsScale: 0
   m_Children: []
