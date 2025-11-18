@@ -7,8 +7,7 @@ public class PythonReceiver : MonoBehaviour
 {
     private UdpClient client;
     public GameObject cube;
-    public int port = 5053; // pastikan sama dengan di Python
-    public float scale = 0.01f; // untuk ubah pixel jadi world space
+    public int port = 5053;
 
     private IPEndPoint endpoint;
 
@@ -22,63 +21,48 @@ public class PythonReceiver : MonoBehaviour
     {
         client = new UdpClient(port);
         endpoint = new IPEndPoint(IPAddress.Any, 0);
-    }
 
-    // void Update()
-    // {
-    //     if (client.Available > 0)
-    //     {
-    //         byte[] data = client.Receive(ref endpoint);
-    //         string json = Encoding.UTF8.GetString(data);
-
-    //         try
-    //         {
-    //             PositionData pos = JsonUtility.FromJson<PositionData>(json);
-
-    //             // Konversi posisi pixel (kamera Python) ke Unity world
-    //             float unityX = (pos.x - 160f) * scale; // 320px/2 = 160
-    //             float unityY = (pos.y - 120f) * scale; // 240px/2 = 120
-
-    //             cube.transform.localPosition = new Vector3(unityX, -unityY, 0);
-    //             cube.SetActive(true);
-    //         }
-    //         catch
-    //         {
-    //             Debug.LogWarning($"Gagal parse JSON: {json}");
-    //         }
-    //     }
-    // }
-void Update()
-{
-    if (client.Available > 0)
-    {
-        IPEndPoint endpoint = new IPEndPoint(IPAddress.Any, 0);
-        byte[] data = client.Receive(ref endpoint);
-        string json = Encoding.UTF8.GetString(data);
-        PositionData pos = JsonUtility.FromJson<PositionData>(json);
-
-        // Debug untuk lihat data dari Python
-        Debug.Log($"📩 Received position: x={pos.x}, y={pos.y}, w={pos.w}, h={pos.h}");
-
-        // Ubah posisi cube
         if (cube != null)
-            {
-            // cube.transform.position = new Vector3(pos.x / 100f, pos.y / 100f, 0);
-            cube.transform.position = new Vector3(
-            (pos.x - 1280) / 250f,
-            (pos.y - 720) / 250f,
-            0
-            );
+            cube.SetActive(false); // awalnya disembunyikan
+    }
 
-        }
-        else
+    void Update()
+    {
+        if (client.Available > 0)
         {
-            Debug.LogWarning("Cube belum diassign ke PythonReceiver!");
+            byte[] data = client.Receive(ref endpoint);
+            string json = Encoding.UTF8.GetString(data);
+
+            PositionData pos = JsonUtility.FromJson<PositionData>(json);
+
+            // ========== DEBUG ==============
+            Debug.Log($"📩 From Python: x={pos.x}, y={pos.y}, w={pos.w}, h={pos.h}");
+
+            // Jika Python kirim x=-1 → tidak ada tangan
+            if (pos.x < 0 || pos.y < 0)
+            {
+                if (cube != null)
+                    cube.SetActive(false);
+                return;
+            }
+
+            // Aktifkan cube
+            if (cube != null && !cube.activeSelf)
+                cube.SetActive(true);
+
+            // =============================
+            // Mapping koordinat kamera (1280x720) → Unity
+            // =============================
+
+            float unityX = (pos.x - 640f) / 300f;  // dari tengah (1280/2)
+            float unityY = (pos.y - 360f) / 300f;  // dari tengah (720/2)
+
+            // Y dibalik (opencv 0,0 di kiri atas)
+            unityY = -unityY;
+
+            cube.transform.localPosition = new Vector3(unityX, unityY, 0f);
         }
     }
-}
-
-
 
     void OnApplicationQuit()
     {
