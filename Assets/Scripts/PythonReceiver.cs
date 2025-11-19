@@ -11,6 +11,9 @@ public class PythonReceiver : MonoBehaviour
 
     private IPEndPoint endpoint;
 
+    Vector3 prevPos = Vector3.zero;  
+    bool hasPrev = false;
+
     [System.Serializable]
     public class PositionData
     {
@@ -27,42 +30,58 @@ public class PythonReceiver : MonoBehaviour
     }
 
     void Update()
+{
+    if (client.Available > 0)
     {
-        if (client.Available > 0)
+        byte[] data = client.Receive(ref endpoint);
+        string json = Encoding.UTF8.GetString(data);
+        PositionData pos = JsonUtility.FromJson<PositionData>(json);
+
+        if (pos.x < 0)
         {
-            byte[] data = client.Receive(ref endpoint);
-            string json = Encoding.UTF8.GetString(data);
-
-            PositionData pos = JsonUtility.FromJson<PositionData>(json);
-
-            // ========== DEBUG ==============
-            Debug.Log($"📩 From Python: x={pos.x}, y={pos.y}, w={pos.w}, h={pos.h}");
-
-            // Jika Python kirim x=-1 → tidak ada tangan
-            if (pos.x < 0 || pos.y < 0)
-            {
-                if (cube != null)
-                    cube.SetActive(false);
-                return;
-            }
-
-            // Aktifkan cube
-            if (cube != null && !cube.activeSelf)
-                cube.SetActive(true);
-
-            // =============================
-            // Mapping koordinat kamera (1280x720) → Unity
-            // =============================
-
-            float unityX = (pos.x - 640f) / 300f;  // dari tengah (1280/2)
-            float unityY = (pos.y - 360f) / 300f;  // dari tengah (720/2)
-
-            // Y dibalik (opencv 0,0 di kiri atas)
-            unityY = -unityY;
-
-            cube.transform.localPosition = new Vector3(unityX, unityY, 0f);
+            cube.SetActive(false);
+            hasPrev = false;
+            return;
         }
+
+        cube.SetActive(true);
+
+        // --- Konversi pixel ke world space ---
+        float unityX = (pos.x - 640f) / 300f;
+        float unityY = -(pos.y - 360f) / 300f;
+
+        float depth = Mathf.Clamp(2.5f - (pos.w / 250f), 0.5f, 3f);
+
+        Vector3 newPos = new Vector3(unityX, unityY, depth);
+
+        // --- POSISI ---
+        cube.transform.localPosition = newPos;
+
+        // --- ROTASI mengikuti arah gerakan tangan ---
+        if (hasPrev)
+        {
+            Vector3 velocity = newPos - prevPos;
+
+            // rotasi Y berdasarkan gerakan kiri-kanan
+            float rotY = velocity.x * 500f;
+
+            // rotasi X berdasarkan gerakan atas-bawah
+            float rotX = -velocity.y * 500f;
+
+            // apply rotasi smooth
+            Quaternion targetRot = Quaternion.Euler(rotX, rotY, 0);
+            cube.transform.localRotation = Quaternion.Slerp(
+                cube.transform.localRotation,
+                targetRot,
+                Time.deltaTime * 6f
+            );
+        }
+
+        prevPos = newPos;
+        hasPrev = true;
     }
+}
+
 
     void OnApplicationQuit()
     {
