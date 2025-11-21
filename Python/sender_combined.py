@@ -3,100 +3,75 @@ import socket
 import json
 import numpy as np
 import mediapipe as mp
+from scipy.spatial.transform import Rotation as R
 
-# --- Socket untuk gambar (ke UDPReceiver Unity) ---
 sock_img = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 addr_img = ('127.0.0.1', 5052)
 
-# --- Socket untuk posisi (ke PythonReceiver Unity) ---
 sock_pos = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 addr_pos = ('127.0.0.1', 5053)
 
-# MediaPipe hands
 mp_hands = mp.solutions.hands
 mp_draw = mp.solutions.drawing_utils
 hands = mp_hands.Hands(max_num_hands=1, min_detection_confidence=0.6)
 
 cap = cv2.VideoCapture(0)
 
+def normalize(v):
+    return v / np.linalg.norm(v)
+
 while True:
     ret, frame = cap.read()
-    if not ret:
-        break
+    if not ret: break
 
-    # Resize supaya konsisten dengan Unity
     frame = cv2.resize(frame, (1280, 720))
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
     results = hands.process(rgb)
 
-    # ======================================================
-    #  HAND DETECTION
-    # ======================================================
     if results.multi_hand_landmarks:
-        hand_landmarks = results.multi_hand_landmarks[0]
+        lm = results.multi_hand_landmarks[0]
+        h, w, _ = frame.shape
 
-        h, w, c = frame.shape
-        xs = []
-        ys = []
+        def LM(id):
+            p = lm.landmark[id]
+            return np.array([p.x * w, p.y * h, p.z])
 
-        for lm in hand_landmarks.landmark:
-            xs.append(int(lm.x * w))
-            ys.append(int(lm.y * h))
+        wrist = LM(0)
+        index = LM(5)
+        pinky = LM(17)
 
+        right = normalize(index - pinky)
+        forward = normalize(np.cross(right, wrist - index))
+        up = normalize(np.cross(forward, right))
+
+        rot_matrix = np.array([right, up, forward]).T
+        quat = R.from_matrix(rot_matrix).as_quat()  # x, y, z, w
+
+        xs = [int(p.x * w) for p in lm.landmark]
+        ys = [int(p.y * h) for p in lm.landmark]
         x_min, x_max = min(xs), max(xs)
         y_min, y_max = min(ys), max(ys)
         w_box = x_max - x_min
         h_box = y_max - y_min
-
         cx = x_min + w_box / 2
         cy = y_min + h_box / 2
 
-        # Draw bounding box
-        cv2.rectangle(frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-
-        # Draw skeleton
-        mp_draw.draw_landmarks(frame, hand_landmarks, mp_hands.HAND_CONNECTIONS)
-
-        # Kirim posisi ke Unity
+        # KIRIM JSON
         data = json.dumps({
             "x": cx,
             "y": cy,
             "w": w_box,
-            "h": h_box
-        }).encode("utf-8")
+            "h": h_box,
+            "qx": float(quat[0]),
+            "qy": float(quat[1]),
+            "qz": float(quat[2]),
+            "qw": float(quat[3])
+        }).encode()
 
         sock_pos.sendto(data, addr_pos)
 
     else:
-        # Tidak ada tangan → kirim flag
-        data = json.dumps({
-            "x": -1,
-            "y": -1,
-            "w": 0,
-            "h": 0
-        }).encode("utf-8")
+        sock_pos.sendto(json.dumps({"x": -1}).encode(), addr_pos)
 
-        sock_pos.sendto(data, addr_pos)
-
-    # ======================================================
-    #  SEND IMAGE TO UNITY
-    # ======================================================
-    _, img_encoded = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])
-    data_img = img_encoded.tobytes()
-
-    # UDP max safe packet < 65KB
-    if len(data_img) < 60000:
-        sock_img.sendto(data_img, addr_img)
-
-    # ======================================================
-    #  PREVIEW
-    # ======================================================
-    cv2.imshow("Hand Tracker", frame)
-    if cv2.waitKey(1) & 0xFF == 27:  # ESC
-        break
-
-cap.release()
-sock_img.close()
-sock_pos.close()
-cv2.destroyAllWindows()
+    cv2.imshow("Hand", frame)
+    if cv2.waitKey(1) == 27: break
